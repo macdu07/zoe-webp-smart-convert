@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -37,14 +38,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background text-foreground">
+      <Card className="w-full max-w-md shadow-xl bg-card text-card-foreground">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <LogoIcon />
+          <div className="mx-auto mb-4 text-primary">
+            <LogoIcon width="48" height="48" />
           </div>
           <CardTitle className="text-3xl font-bold">Zoe WebP Smart Convert</CardTitle>
-          <CardDescription>Por favor, introduce tu clave de acceso para continuar.</CardDescription>
+          <CardDescription className="text-muted-foreground">Por favor, introduce tu clave de acceso para continuar.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -59,7 +60,7 @@ export default function LoginPage() {
                   onChange={(e) => setAccessKey(e.target.value)}
                   placeholder="Tu clave secreta"
                   required
-                  className="pl-10"
+                  className="pl-10 bg-input text-foreground border-border focus:bg-background"
                   aria-describedby="accessKey-description"
                 />
               </div>
@@ -74,7 +75,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
        <footer className="mt-8 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Zoe Convert. Todos los derechos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} Zoe Convert. All rights reserved.</p>
       </footer>
     </div>
   );

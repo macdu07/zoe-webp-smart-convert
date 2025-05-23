@@ -4,32 +4,21 @@ export function LogoIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      width="28"
+      height="28"
       viewBox="0 0 100 100"
-      width="40"
-      height="40"
-      aria-label="Zoe Convert Logo"
+      fill="currentColor" // Inherits color from parent, e.g., text-primary
+      aria-label="Zoe Convert Logo Icon"
       {...props}
     >
-      <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: 'hsl(var(--primary))', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: 'hsl(var(--accent))', stopOpacity: 1 }} />
-        </linearGradient>
-      </defs>
-      <path
-        d="M20 25 H80 L20 75 H80"
-        stroke="url(#logoGradient)"
-        strokeWidth="10"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M75 20 Q85 40 70 50 Q85 60 75 80"
-        stroke="hsl(var(--accent))"
-        strokeWidth="6"
-        fill="none"
-        strokeLinecap="round"
+      <rect
+        x="25" // Adjusted for better centering in 100x100 box
+        y="35"
+        width="50" // Adjusted for proportion
+        height="30"
+        rx="10" // Rounded corners
+        ry="10"
+        transform="rotate(-20 50 50)" // Slight tilt
       />
     </svg>
   );

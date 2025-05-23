@@ -1,32 +1,27 @@
+
 "use client";
 
 import { useState, useRef, type ChangeEvent } from 'react';
-import Image from 'next/image';
+import Image from 'next/image'; // Keep next/image for optimized images
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { ImageComparer } from './ImageComparer';
 import { LogoIcon } from '@/components/icons/LogoIcon';
-import { UploadCloud, Download, Sparkles, Info, Loader2, FileImage, Tag, Weight, ImagePlay } from 'lucide-react';
+import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateImageName, type GenerateImageNameInput } from '@/ai/flows/generate-image-name';
 import { getImageMetadata, convertToWebP, formatBytes, type ImageMetadata, type WebPConversionResult } from '@/lib/imageUtils';
-
-interface ConversionResult {
-  original: ImageMetadata;
-  converted: WebPConversionResult;
-  aiName: string;
-  finalName: string;
-}
 
 export default function ConversionPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [originalImage, setOriginalImage] = useState<ImageMetadata | null>(null);
   const [convertedImage, setConvertedImage] = useState<WebPConversionResult | null>(null);
   const [prefix, setPrefix] = useState('');
-  const [finalName, setFinalName] = useState('');
+  const [finalName, setFinalName] = useState('your-awesome-image.webp'); // Default to placeholder
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -40,12 +35,13 @@ export default function ConversionPage() {
         setSelectedFile(null);
         setOriginalImage(null);
         setConvertedImage(null);
+        setFinalName('your-awesome-image.webp');
         return;
       }
       setSelectedFile(file);
       setError(null);
-      setConvertedImage(null); // Reset converted image on new file upload
-      setFinalName('');
+      setConvertedImage(null);
+      setFinalName('your-awesome-image.webp'); 
       try {
         const metadata = await getImageMetadata(file);
         setOriginalImage(metadata);
@@ -66,14 +62,13 @@ export default function ConversionPage() {
 
     setIsLoading(true);
     setError(null);
+    setFinalName('Generando nombre...');
 
     try {
-      // 1. Convert to WebP
       const webpResult = await convertToWebP(originalImage, { targetMaxKB: 800, targetWidth: 1920 });
       setConvertedImage(webpResult);
       toast({ title: 'Conversión Exitosa', description: `Imagen convertida a WebP (${formatBytes(webpResult.sizeBytes)}).` });
 
-      // 2. Generate AI Name
       const aiInput: GenerateImageNameInput = { photoDataUri: originalImage.dataUrl };
       const aiOutput = await generateImageName(aiInput);
       
@@ -84,23 +79,23 @@ export default function ConversionPage() {
       const completeFinalName = `${generatedName}.webp`;
       setFinalName(completeFinalName);
 
-      toast({ title: 'Nombre Generado', description: `Nombre AI: ${completeFinalName}` });
+      toast({ title: 'Nombre Generado por IA', description: `Sugerencia: ${completeFinalName}` });
 
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Ocurrió un error desconocido.';
       console.error("Conversion/Naming Error:", e);
       toast({ title: 'Error en el Proceso', description: errorMsg, variant: 'destructive' });
       setError(errorMsg);
-      setConvertedImage(null); // Clear converted image on error
-      setFinalName('');
+      setConvertedImage(null);
+      setFinalName('error-al-generar.webp');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDownload = () => {
-    if (!convertedImage?.dataUrl || !finalName) {
-      toast({ title: 'Error de Descarga', description: 'No hay imagen convertida para descargar.', variant: 'destructive' });
+    if (!convertedImage?.dataUrl || !finalName || finalName.includes("Generando") || finalName.includes("error")) {
+      toast({ title: 'Error de Descarga', description: 'No hay imagen convertida válida para descargar.', variant: 'destructive' });
       return;
     }
     const link = document.createElement('a');
@@ -116,135 +111,157 @@ export default function ConversionPage() {
     fileInputRef.current?.click();
   };
 
+  const handleCopyName = () => {
+    if (finalName && !finalName.includes("Generando") && !finalName.includes("error")) {
+      navigator.clipboard.writeText(finalName)
+        .then(() => toast({ title: 'Nombre Copiado', description: `${finalName} copiado al portapapeles.` }))
+        .catch(err => toast({ title: 'Error al Copiar', description: 'No se pudo copiar el nombre.', variant: 'destructive' }));
+    }
+  };
+
+  const qualityWeightValue = originalImage && convertedImage 
+    ? Math.round((1 - (convertedImage.sizeBytes / originalImage.sizeBytes)) * 80 + 20) // Example calculation, aim for 95/80 visual
+    : 80; // Placeholder value for "Quality/Weight: 95/80" bar
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <header className="bg-background border-b border-border shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-primary">
             <LogoIcon />
-            <h1 className="text-xl md:text-2xl font-semibold text-primary">Zoe WebP Smart Convert</h1>
+            <h1 className="text-xl md:text-2xl font-semibold">Zoe Convert</h1>
           </div>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <HelpCircle className="mr-1 h-4 w-4" /> Help
+          </Button>
         </div>
       </header>
 
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           {/* Left Column: Controls & Info */}
+          <Card className="shadow-lg bg-card text-card-foreground">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Convert Your Images to Smart WebP</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div
+                onClick={triggerFileInput}
+                className="mt-1 flex flex-col items-center justify-center p-8 rounded-md border-2 border-dashed border-primary/40 hover:border-primary cursor-pointer bg-background/30 transition-colors"
+              >
+                <UploadCloud className="h-12 w-12 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-card-foreground">
+                  {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
+                </p>
+                <p className="text-xs text-muted-foreground">JPG, JPEG, or PNG</p>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".jpg,.jpeg,.png"
+                  className="hidden"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="prefix" className="text-xs font-medium text-muted-foreground">Optional file name prefix</Label>
+                <Input
+                  id="prefix"
+                  type="text"
+                  value={prefix}
+                  onChange={(e) => setPrefix(e.target.value)}
+                  placeholder="e.g., product-image-"
+                  className="mt-1 bg-input text-foreground border-border focus:bg-background placeholder:text-muted-foreground/70"
+                />
+              </div>
+
+              <Button onClick={handleConvert} disabled={isLoading || !selectedFile} className="w-full font-semibold py-3 text-base">
+                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
+                {isLoading ? 'Processing...' : 'Convert and Analyze'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Right Column: Image Comparer & Results */}
           <div className="space-y-6">
-            <Card className="shadow-lg">
+            <Card className="shadow-lg bg-card text-card-foreground">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><FileImage className="text-primary"/>Configuración de Conversión</CardTitle>
-                <CardDescription>Sube tu imagen y personaliza el nombre del archivo.</CardDescription>
+                  <CardTitle className="text-xl font-semibold">Conversion Result</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="file-upload" className="text-sm font-medium">Subir Imagen (JPG, PNG)</Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept=".jpg,.jpeg,.png"
-                    className="hidden" 
-                  />
-                  <Button onClick={triggerFileInput} variant="outline" className="w-full mt-1">
-                    <UploadCloud className="mr-2 h-4 w-4" />
-                    {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
-                  </Button>
-                  {originalImage && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      <p>Original: {originalImage.name} ({formatBytes(originalImage.sizeBytes)}) - {originalImage.width}x{originalImage.height}px</p>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="prefix" className="text-sm font-medium">Prefijo Opcional</Label>
-                  <div className="relative">
-                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="finalName" className="text-xs font-medium text-muted-foreground">Suggested File Name (by Gemini)</Label>
+                  <div className="relative mt-1">
                     <Input
-                      id="prefix"
+                      id="finalName"
                       type="text"
-                      value={prefix}
-                      onChange={(e) => setPrefix(e.target.value)}
-                      placeholder="Ej: mi-marca-"
-                      className="pl-10"
+                      value={finalName}
+                      readOnly
+                      className="pr-10 bg-input text-foreground border-border placeholder:text-muted-foreground/70"
+                      aria-label="Suggested file name"
                     />
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={handleCopyName}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-primary"
+                      aria-label="Copy file name"
+                      disabled={finalName.includes("Generando") || finalName.includes("error")}
+                    >
+                      <Copy className="h-4 w-4"/>
+                    </Button>
                   </div>
                 </div>
-                <Button onClick={handleConvert} disabled={isLoading || !selectedFile} className="w-full font-semibold">
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  {isLoading ? 'Procesando...' : 'Convertir y Nombrar'}
-                </Button>
-              </CardContent>
-            </Card>
 
+                <ImageComparer
+                  originalSrc={originalImage?.dataUrl}
+                  convertedSrc={convertedImage?.dataUrl}
+                  originalAlt={originalImage?.name || "Original image placeholder"}
+                  convertedAlt={finalName || "Converted image placeholder"}
+                  aspectRatio={originalImage ? `${originalImage.width}/${originalImage.height}` : "3/2"}
+                />
+                
+                <div className="space-y-2 text-sm pt-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Original Size:</span>
+                    <span className="font-medium">{originalImage ? formatBytes(originalImage.sizeBytes) : '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Converted Size:</span>
+                    <span className="font-medium">{convertedImage ? formatBytes(convertedImage.sizeBytes) : '-'}</span>
+                  </div>
+                  <div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Quality/Weight:</span>
+                        <span className="font-medium">~95/80</span> 
+                    </div>
+                    <Progress value={qualityWeightValue} className="h-2 mt-1 bg-primary/20" />
+                  </div>
+                </div>
+
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handleDownload} className="w-full font-semibold py-3 text-base" variant="default" disabled={!convertedImage || isLoading || finalName.includes("Generando") || finalName.includes("error")}>
+                  <Download className="mr-2 h-5 w-5" />
+                  Download WebP Image
+                </Button>
+              </CardFooter>
+            </Card>
+            
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mt-6">
                 <Info className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
-            {(originalImage || convertedImage) && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Weight className="text-primary"/>Resultados de la Conversión</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {originalImage && (
-                  <div>
-                    <h4 className="font-semibold">Imagen Original:</h4>
-                    <p>Nombre: {originalImage.name}</p>
-                    <p>Tamaño: {formatBytes(originalImage.sizeBytes)}</p>
-                    <p>Dimensiones: {originalImage.width}x{originalImage.height}px</p>
-                    <p>Tipo: {originalImage.type}</p>
-                  </div>
-                )}
-                {convertedImage && (
-                  <div>
-                    <h4 className="font-semibold mt-2">Imagen Convertida (WebP):</h4>
-                    <p>Nombre Final: {finalName || <span className="italic text-muted-foreground">Generando...</span>}</p>
-                    <p>Tamaño: {formatBytes(convertedImage.sizeBytes)}</p>
-                    <p>Dimensiones: {convertedImage.width}x{convertedImage.height}px</p>
-                  </div>
-                )}
-              </CardContent>
-              {convertedImage && finalName && (
-                <CardFooter>
-                  <Button onClick={handleDownload} className="w-full font-semibold" variant="default">
-                    <Download className="mr-2 h-4 w-4" />
-                    Descargar {finalName}
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
-            )}
-          </div>
-
-          {/* Right Column: Image Comparer */}
-          <div className="sticky top-20"> {/* Sticky for comparer on larger screens */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><ImagePlay className="text-primary"/>Comparador Visual</CardTitle>
-                  <CardDescription>Compara la imagen original con la convertida.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                 <ImageComparer
-                    originalSrc={originalImage?.dataUrl}
-                    convertedSrc={convertedImage?.dataUrl}
-                    originalAlt={originalImage?.name || "Original"}
-                    convertedAlt={finalName || "Convertida"}
-                    aspectRatio={originalImage ? `${originalImage.width}/${originalImage.height}` : "16/9"}
-                  />
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
 
-      <footer className="bg-card border-t border-border text-center py-4 mt-auto">
-        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Zoe WebP Smart Convert. Potenciado por IA.</p>
+      <footer className="bg-background border-t border-border text-center py-4 mt-auto">
+        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Zoe Convert. All rights reserved.</p>
       </footer>
     </div>
   );
