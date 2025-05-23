@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+     domains: ['placehold.co'], // Keep this if you had it, or remove if remotePatterns is enough
   },
 };
 
