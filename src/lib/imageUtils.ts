@@ -1,3 +1,4 @@
+
 "use client";
 
 export interface ImageMetadata {
@@ -42,10 +43,9 @@ export async function getImageMetadata(file: File): Promise<ImageMetadata> {
 
 export async function convertToWebP(
   originalImage: { dataUrl: string; width: number; height: number },
-  options: { targetMaxKB?: number; initialQuality?: number; targetWidth?: number } = {}
+  options: { targetMaxKB?: number; quality?: number; targetWidth?: number } = {} // quality is 0-1
 ): Promise<WebPConversionResult> {
-  const { targetMaxKB = 800, initialQuality = 0.9, targetWidth } = options;
-  const targetMaxBytes = targetMaxKB * 1024;
+  const { quality = 0.95, targetWidth } = options; // Default quality 0.95 (95%)
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -68,37 +68,18 @@ export async function convertToWebP(
       canvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
 
-      let currentQuality = initialQuality;
-      const MAX_ATTEMPTS = 10; // Max attempts to reduce quality
-      let attempts = 0;
-
-      function attemptConversion() {
-        if (attempts >= MAX_ATTEMPTS || currentQuality < 0.05) { // Min quality guard
-          // If still too large after max attempts or min quality, try one last time with very low quality
-          const webpDataUrl = canvas.toDataURL('image/webp', 0.1); 
-          const blob = dataURLtoBlob(webpDataUrl);
-          if (blob.size > targetMaxBytes) {
-             return reject(new Error(`Image too large (${(blob.size / 1024).toFixed(1)}KB) even at lowest quality. Max allowed: ${targetMaxKB}KB.`));
-          }
-           resolve({ dataUrl: webpDataUrl, sizeBytes: blob.size, width, height });
-          return;
-        }
-
-        const webpDataUrl = canvas.toDataURL('image/webp', currentQuality);
-        const blob = dataURLtoBlob(webpDataUrl);
-
-        if (blob.size <= targetMaxBytes) {
-          resolve({ dataUrl: webpDataUrl, sizeBytes: blob.size, width, height });
-        } else {
-          currentQuality -= 0.1; // Reduce quality for next attempt
-          attempts++;
-          // Add a small delay to allow UI to update if this were a long loop
-          // For this client-side logic, direct recursion is fine.
-          attemptConversion(); 
-        }
-      }
+      const webpDataUrl = canvas.toDataURL('image/webp', quality);
+      const blob = dataURLtoBlob(webpDataUrl);
       
-      attemptConversion();
+      // The targetMaxKB is not strictly enforced here if quality is user-defined.
+      // It can be used for warnings or further logic if needed.
+      // For instance, if options.targetMaxKB is set:
+      // const targetMaxBytes = (options.targetMaxKB || 800) * 1024;
+      // if (blob.size > targetMaxBytes) {
+      //   console.warn(`Image size (${(blob.size / 1024).toFixed(1)}KB) at quality ${quality*100}% exceeds target ${options.targetMaxKB}KB.`);
+      // }
+
+      resolve({ dataUrl: webpDataUrl, sizeBytes: blob.size, width, height });
     };
     img.onerror = (err) => reject(new Error(`Failed to load image for conversion: ${err}`));
     img.src = originalImage.dataUrl;

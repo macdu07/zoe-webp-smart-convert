@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { ImageComparer } from './ImageComparer';
-import { LogoIcon } from '@/components/icons/LogoIcon';
-import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle } from 'lucide-react';
+import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateImageName, type GenerateImageNameInput } from '@/ai/flows/generate-image-name';
 import { getImageMetadata, convertToWebP, formatBytes, type ImageMetadata, type WebPConversionResult } from '@/lib/imageUtils';
@@ -21,9 +21,10 @@ export default function ConversionPage() {
   const [originalImage, setOriginalImage] = useState<ImageMetadata | null>(null);
   const [convertedImage, setConvertedImage] = useState<WebPConversionResult | null>(null);
   const [prefix, setPrefix] = useState('');
-  const [finalName, setFinalName] = useState('your-awesome-image.webp'); // Default to placeholder
+  const [finalName, setFinalName] = useState('your-awesome-image.webp');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compressionQuality, setCompressionQuality] = useState(95); // 5-100
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,7 +66,8 @@ export default function ConversionPage() {
     setFinalName('Generando nombre...');
 
     try {
-      const webpResult = await convertToWebP(originalImage, { targetMaxKB: 800, targetWidth: 1920 });
+      // Pass quality as 0-1 range
+      const webpResult = await convertToWebP(originalImage, { quality: compressionQuality / 100, targetMaxKB: 800, targetWidth: 1920 });
       setConvertedImage(webpResult);
       toast({ title: 'Conversión Exitosa', description: `Imagen convertida a WebP (${formatBytes(webpResult.sizeBytes)}).` });
 
@@ -118,17 +120,17 @@ export default function ConversionPage() {
         .catch(err => toast({ title: 'Error al Copiar', description: 'No se pudo copiar el nombre.', variant: 'destructive' }));
     }
   };
-
-  const qualityWeightValue = originalImage && convertedImage 
-    ? Math.round((1 - (convertedImage.sizeBytes / originalImage.sizeBytes)) * 80 + 20) // Example calculation, aim for 95/80 visual
-    : 80; // Placeholder value for "Quality/Weight: 95/80" bar
+  
+  const reductionPercentage = originalImage && convertedImage 
+    ? Math.round((1 - convertedImage.sizeBytes / originalImage.sizeBytes) * 100) 
+    : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <header className="bg-background border-b border-border shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-primary">
-            <LogoIcon />
+            <ImagePlay className="h-6 w-6 text-primary" />
             <h1 className="text-xl md:text-2xl font-semibold">Zoe Convert</h1>
           </div>
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -175,6 +177,27 @@ export default function ConversionPage() {
                   className="mt-1 bg-input text-foreground border-border focus:bg-background placeholder:text-muted-foreground/70"
                 />
               </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <Label htmlFor="compressionQuality" className="text-xs font-medium text-muted-foreground">
+                    WebP Quality Level
+                  </Label>
+                  <span className="text-sm font-semibold text-primary">{compressionQuality}%</span>
+                </div>
+                <Slider
+                  id="compressionQuality"
+                  min={5}
+                  max={100}
+                  step={1}
+                  value={[compressionQuality]}
+                  onValueChange={(value) => setCompressionQuality(value[0])}
+                  className="w-full [&>span:last-child]:bg-primary [&>span:last-child]:border-primary-foreground"
+                  aria-label="WebP compression quality"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Lower values mean smaller files but lower quality.</p>
+              </div>
+
 
               <Button onClick={handleConvert} disabled={isLoading || !selectedFile} className="w-full font-semibold py-3 text-base">
                 {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
@@ -224,6 +247,10 @@ export default function ConversionPage() {
                 
                 <div className="space-y-2 text-sm pt-2">
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Quality Setting:</span>
+                    <span className="font-medium">{compressionQuality}%</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Original Size:</span>
                     <span className="font-medium">{originalImage ? formatBytes(originalImage.sizeBytes) : '-'}</span>
                   </div>
@@ -233,10 +260,14 @@ export default function ConversionPage() {
                   </div>
                   <div>
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Quality/Weight:</span>
-                        <span className="font-medium">~95/80</span> 
+                        <span className="text-muted-foreground">Size Reduction:</span>
+                        <span className="font-medium">{reductionPercentage}%</span> 
                     </div>
-                    <Progress value={qualityWeightValue} className="h-2 mt-1 bg-primary/20" />
+                    <Progress 
+                        value={reductionPercentage} 
+                        className="h-2 mt-1 bg-primary/20" 
+                        aria-label="Image size reduction percentage"
+                    />
                   </div>
                 </div>
 

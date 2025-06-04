@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import NextImage from 'next/image'; // Renamed to avoid conflict with HTMLImageElement
 import { Slider } from '@/components/ui/slider';
+import { ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -26,9 +27,6 @@ export function ImageComparer({
   const [isLoadingOriginal, setIsLoadingOriginal] = useState(true);
   const [isLoadingConverted, setIsLoadingConverted] = useState(true);
   
-  // Default placeholder if no images are provided at all
-  const defaultPlaceholderSrc = "https://placehold.co/600x400.png";
-
   useEffect(() => {
     if (originalSrc) setIsLoadingOriginal(true); else setIsLoadingOriginal(false);
   }, [originalSrc]);
@@ -37,13 +35,10 @@ export function ImageComparer({
     if (convertedSrc) setIsLoadingConverted(true); else setIsLoadingConverted(false);
   }, [convertedSrc]);
 
-  const effectiveOriginalSrc = originalSrc || defaultPlaceholderSrc;
-  const effectiveConvertedSrc = convertedSrc || defaultPlaceholderSrc;
-
   const showOriginal = !!originalSrc;
   const showConverted = !!convertedSrc;
   const showBoth = showOriginal && showConverted;
-  const showPlaceholderOnly = !showOriginal && !convertedSrc;
+  const showPlaceholderOnly = !showOriginal && !showConverted;
 
   // Determine active state for loading skeletons
   const originalLoadingActive = showOriginal && isLoadingOriginal;
@@ -55,23 +50,22 @@ export function ImageComparer({
       <div
         className={cn(
           "relative w-full bg-muted rounded-md overflow-hidden border border-border",
-          (showPlaceholderOnly || (!showOriginal && !showConverted)) && "flex items-center justify-center text-muted-foreground text-center min-h-[200px] md:min-h-[300px]"
+          showPlaceholderOnly && "flex items-center justify-center text-muted-foreground text-center min-h-[200px] md:min-h-[300px]"
         )}
         style={{ aspectRatio: aspectRatio }}
       >
         {/* Original Image */}
-        {(showOriginal || showPlaceholderOnly) && (
+        {showOriginal && (
           <div className="relative w-full h-full">
             {originalLoadingActive && <Skeleton className="absolute inset-0 w-full h-full rounded-md" />}
             <NextImage
-              src={effectiveOriginalSrc}
+              src={originalSrc!} 
               alt={originalAlt}
               layout="fill"
               objectFit="contain"
               className={cn("rounded-md transition-opacity duration-300", originalLoadingActive ? "opacity-0" : "opacity-100")}
               onLoadingComplete={() => setIsLoadingOriginal(false)}
-              onError={() => setIsLoadingOriginal(false)} // Handle error case as well
-              data-ai-hint="plant pot"
+              onError={() => setIsLoadingOriginal(false)} 
             />
              <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded">
               Original (JPG/PNG)
@@ -88,14 +82,13 @@ export function ImageComparer({
              <div className="relative w-full h-full">
               {convertedLoadingActive && <Skeleton className="absolute inset-0 w-full h-full rounded-md" />}
               <NextImage
-                src={effectiveConvertedSrc} 
+                src={convertedSrc!} 
                 alt={convertedAlt}
                 layout="fill"
                 objectFit="contain"
                 className={cn("rounded-md transition-opacity duration-300", convertedLoadingActive ? "opacity-0" : "opacity-100")}
                 onLoadingComplete={() => setIsLoadingConverted(false)}
                 onError={() => setIsLoadingConverted(false)}
-                data-ai-hint="forest lake"
               />
               <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded">
                 Converted (WebP)
@@ -109,14 +102,13 @@ export function ImageComparer({
             <div className="relative w-full h-full">
                 {convertedLoadingActive && <Skeleton className="absolute inset-0 w-full h-full rounded-md" />}
                 <NextImage
-                    src={effectiveConvertedSrc}
+                    src={convertedSrc!}
                     alt={convertedAlt}
                     layout="fill"
                     objectFit="contain"
                     className={cn("rounded-md transition-opacity duration-300", convertedLoadingActive ? "opacity-0" : "opacity-100")}
                     onLoadingComplete={() => setIsLoadingConverted(false)}
                     onError={() => setIsLoadingConverted(false)}
-                    data-ai-hint="abstract texture"
                 />
                 <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded">
                     Converted (WebP)
@@ -125,9 +117,11 @@ export function ImageComparer({
         )}
 
         {showPlaceholderOnly && (
-             <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground p-4">
-                Upload an image to see the comparison.
-            </p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-4">
+                <ImageIcon className="w-16 h-16 mb-4 text-primary/30" />
+                <p className="text-center text-sm">Upload an image to see the comparison.</p>
+                <p className="text-xs text-muted-foreground/80 text-center mt-1">Original and WebP versions will appear here.</p>
+            </div>
         )}
       </div>
 
