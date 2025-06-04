@@ -43,7 +43,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 text-primary">
             <ImagePlay className="h-12 w-12" /> {/* Updated icon */}
           </div>
-          <CardTitle className="text-3xl font-bold">Zoe WebP Smart Convert</CardTitle>
+          <CardTitle className="text-3xl font-bold">Zoe Convert</CardTitle>
           <CardDescription className="text-muted-foreground">Por favor, introduce tu clave de acceso para continuar.</CardDescription>
         </CardHeader>
         <CardContent>

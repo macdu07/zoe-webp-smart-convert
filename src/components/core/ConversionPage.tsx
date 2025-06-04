@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { ImageComparer } from './ImageComparer';
-import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay, LogOut } from 'lucide-react';
+import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay, LogOut, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateImageName, type GenerateImageNameInput } from '@/ai/flows/generate-image-name';
 import { getImageMetadata, convertToWebP, formatBytes, type ImageMetadata, type WebPConversionResult } from '@/lib/imageUtils';
@@ -132,6 +132,20 @@ export default function ConversionPage() {
     });
     router.push('/login');
   };
+
+  const handleClear = () => {
+    setSelectedFile(null);
+    setOriginalImage(null);
+    setConvertedImage(null);
+    setPrefix('');
+    setFinalName('your-awesome-image.webp');
+    setError(null);
+    setCompressionQuality(90); // Reset to default
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // Clear the file input
+    }
+    toast({ title: 'Formulario Limpiado', description: 'Puedes subir una nueva imagen.' });
+  };
   
   const reductionPercentage = originalImage && convertedImage 
     ? Math.round((1 - convertedImage.sizeBytes / originalImage.sizeBytes) * 100) 
@@ -215,11 +229,16 @@ export default function ConversionPage() {
                 <p className="text-xs text-muted-foreground mt-1">Lower values mean smaller files but lower quality.</p>
               </div>
 
-
-              <Button onClick={handleConvert} disabled={isLoading || !selectedFile} className="w-full font-semibold py-3 text-base">
-                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
-                {isLoading ? 'Processing...' : 'Convert and Analyze'}
-              </Button>
+              <div className="flex gap-4">
+                <Button onClick={handleConvert} disabled={isLoading || !selectedFile} className="flex-grow font-semibold py-3 text-base">
+                  {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
+                  {isLoading ? 'Processing...' : 'Convert and Analyze'}
+                </Button>
+                <Button onClick={handleClear} variant="outline" className="font-semibold py-3 text-base" disabled={!selectedFile && !originalImage && !convertedImage}>
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  Clear
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -314,3 +333,4 @@ export default function ConversionPage() {
     </div>
   );
 }
+
