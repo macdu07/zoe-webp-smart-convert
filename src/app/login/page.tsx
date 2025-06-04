@@ -9,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { login } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
-import { LogoIcon } from '@/components/icons/LogoIcon';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, ImagePlay } from 'lucide-react'; // Updated import
 
 export default function LoginPage() {
   const [accessKey, setAccessKey] = useState('');
@@ -42,7 +41,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-xl bg-card text-card-foreground">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 text-primary">
-            <LogoIcon width="48" height="48" />
+            <ImagePlay className="h-12 w-12" /> {/* Updated icon */}
           </div>
           <CardTitle className="text-3xl font-bold">Zoe WebP Smart Convert</CardTitle>
           <CardDescription className="text-muted-foreground">Por favor, introduce tu clave de acceso para continuar.</CardDescription>

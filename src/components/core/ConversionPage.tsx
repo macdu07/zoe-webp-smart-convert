@@ -24,7 +24,7 @@ export default function ConversionPage() {
   const [finalName, setFinalName] = useState('your-awesome-image.webp');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [compressionQuality, setCompressionQuality] = useState(95); // 5-100
+  const [compressionQuality, setCompressionQuality] = useState(90); // 5-100
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 

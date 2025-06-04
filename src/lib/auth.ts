@@ -1,10 +1,13 @@
 "use client";
 
 const AUTH_KEY = "zoe-convert-auth-key";
-const VALID_ACCESS_KEY = "zoeconvert2024"; // Hardcoded access key
+// The access key is now stored in an environment variable
+// NEXT_PUBLIC_ prefix is necessary for it to be available in client-side code
+const VALID_ACCESS_KEY = process.env.NEXT_PUBLIC_ACCESS_KEY;
 
 export function login(accessKey: string): boolean {
-  if (accessKey === VALID_ACCESS_KEY) {
+  // Ensure VALID_ACCESS_KEY is defined and matches, otherwise login fails
+  if (VALID_ACCESS_KEY && accessKey === VALID_ACCESS_KEY) {
     if (typeof window !== "undefined") {
       localStorage.setItem(AUTH_KEY, "true");
     }
