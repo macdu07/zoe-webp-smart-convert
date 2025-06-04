@@ -1,7 +1,7 @@
 
-# Zoe WebP Smart Convert
+# Zoe Convert
 
-"Zoe WebP Smart Convert" es una aplicación web desarrollada con Next.js, diseñada para la conversión inteligente de imágenes al formato WebP. Permite a los usuarios cargar imágenes en formato JPG, JPEG o PNG, seleccionar la calidad de compresión deseada y convertirlas a WebP.
+"Zoe Convert" es una aplicación web desarrollada con Next.js, diseñada para la conversión inteligente de imágenes al formato WebP. Permite a los usuarios cargar imágenes en formato JPG, JPEG o PNG, seleccionar la calidad de compresión deseada y convertirlas a WebP.
 
 Una característica destacada es el uso de Inteligencia Artificial Generativa (a través de Genkit y el modelo Gemini de Google AI) para sugerir un nombre de archivo descriptivo y optimizado para SEO en español para la imagen convertida. La aplicación también ofrece una comparación visual entre la imagen original y la convertida, junto con detalles sobre la reducción de tamaño obtenida. El acceso a la aplicación está protegido por una clave de acceso.
 
@@ -60,8 +60,8 @@ Para ejecutar esta aplicación en tu entorno local:
 
 1.  **Clonar el Repositorio:**
     ```bash
-    git clone <URL_DEL_REPOSITORIO>
-    cd <NOMBRE_DEL_DIRECTORIO>
+    git clone https://github.com/macdu07/zoe-webp-smart-convert.git
+    cd zoe-webp-smart-convert
     ```
 
 2.  **Instalar Dependencias:**
