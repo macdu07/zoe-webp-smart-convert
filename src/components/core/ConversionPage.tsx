@@ -3,6 +3,7 @@
 
 import { useState, useRef, type ChangeEvent } from 'react';
 import Image from 'next/image'; // Keep next/image for optimized images
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +12,11 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { ImageComparer } from './ImageComparer';
-import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay } from 'lucide-react';
+import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateImageName, type GenerateImageNameInput } from '@/ai/flows/generate-image-name';
 import { getImageMetadata, convertToWebP, formatBytes, type ImageMetadata, type WebPConversionResult } from '@/lib/imageUtils';
+import { logout } from '@/lib/auth';
 
 export default function ConversionPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -26,6 +28,7 @@ export default function ConversionPage() {
   const [error, setError] = useState<string | null>(null);
   const [compressionQuality, setCompressionQuality] = useState(90); // 5-100
   const { toast } = useToast();
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -120,6 +123,15 @@ export default function ConversionPage() {
         .catch(err => toast({ title: 'Error al Copiar', description: 'No se pudo copiar el nombre.', variant: 'destructive' }));
     }
   };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: 'Sesión cerrada',
+      description: 'Has cerrado sesión correctamente.',
+    });
+    router.push('/login');
+  };
   
   const reductionPercentage = originalImage && convertedImage 
     ? Math.round((1 - convertedImage.sizeBytes / originalImage.sizeBytes) * 100) 
@@ -133,9 +145,14 @@ export default function ConversionPage() {
             <ImagePlay className="h-6 w-6 text-primary" />
             <h1 className="text-xl md:text-2xl font-semibold">Zoe Convert</h1>
           </div>
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            <HelpCircle className="mr-1 h-4 w-4" /> Help
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <HelpCircle className="mr-1 h-4 w-4" /> Help
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
+              <LogOut className="mr-1 h-4 w-4" /> Logout
+            </Button>
+          </div>
         </div>
       </header>
 
