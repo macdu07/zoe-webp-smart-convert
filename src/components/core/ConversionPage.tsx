@@ -175,7 +175,7 @@ export default function ConversionPage() {
           {/* Left Column: Controls & Info */}
           <Card className="shadow-lg bg-card text-card-foreground">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold">Convert Your Images to Smart WebP</CardTitle>
+              <CardTitle className="text-xl font-semibold">Convert your images to smart WebP</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div
@@ -246,7 +246,7 @@ export default function ConversionPage() {
           <div className="space-y-6">
             <Card className="shadow-lg bg-card text-card-foreground">
               <CardHeader>
-                  <CardTitle className="text-xl font-semibold">Conversion Result</CardTitle>
+                  <CardTitle className="text-xl font-semibold">Conversion result</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>

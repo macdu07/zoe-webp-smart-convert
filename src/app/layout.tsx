@@ -8,7 +8,7 @@ const geistSans = GeistSans;
 const geistMono = GeistMono;
 
 export const metadata: Metadata = {
-  title: 'Zoe WebP Smart Convert',
+  title: 'Zoe Convert',
   description: 'Conversión Inteligente de Imágenes a WebP',
 };
 
