@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,7 @@ export default function ConversionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compressionQuality, setCompressionQuality] = useState(90); // 5-100
+  const [language, setLanguage] = useState<'spanish' | 'english'>('spanish');
   const { toast } = useToast();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +76,7 @@ export default function ConversionPage() {
       setConvertedImage(webpResult);
       toast({ title: 'Conversión Exitosa', description: `Imagen convertida a WebP (${formatBytes(webpResult.sizeBytes)}).` });
 
-      const aiInput: GenerateImageNameInput = { photoDataUri: originalImage.dataUrl };
+      const aiInput: GenerateImageNameInput = { photoDataUri: originalImage.dataUrl, language };
       const aiOutput = await generateImageName(aiInput);
       
       let generatedName = aiOutput.filename;
@@ -141,6 +143,7 @@ export default function ConversionPage() {
     setFinalName('your-awesome-image.webp');
     setError(null);
     setCompressionQuality(90); // Reset to default
+    setLanguage('spanish'); // Reset to default
     if (fileInputRef.current) {
       fileInputRef.current.value = ''; // Clear the file input
     }
@@ -207,6 +210,19 @@ export default function ConversionPage() {
                   placeholder="e.g., product-image-"
                   className="mt-1 bg-input text-foreground border-border focus:bg-background placeholder:text-muted-foreground/70"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="language" className="text-xs font-medium text-muted-foreground">AI filename language</Label>
+                <Select value={language} onValueChange={(value: 'spanish' | 'english') => setLanguage(value)}>
+                  <SelectTrigger className="mt-1 bg-input text-foreground border-border focus:bg-background">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spanish">🇪🇸 Español</SelectItem>
+                    <SelectItem value="english">🇺🇸 English</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

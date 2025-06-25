@@ -18,11 +18,15 @@ const GenerateImageNameInputSchema = z.object({
     .describe(
       "A photo of a plant, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  language: z
+    .enum(['spanish', 'english'])
+    .default('spanish')
+    .describe('The language for generating the descriptive filename.')
 });
 export type GenerateImageNameInput = z.infer<typeof GenerateImageNameInputSchema>;
 
 const GenerateImageNameOutputSchema = z.object({
-  filename: z.string().describe('A descriptive filename for the image in Spanish, lowercase, and hyphenated.'),
+  filename: z.string().describe('A descriptive filename for the image, lowercase, and hyphenated.'),
 });
 export type GenerateImageNameOutput = z.infer<typeof GenerateImageNameOutputSchema>;
 
@@ -36,9 +40,13 @@ const generateImageNamePrompt = ai.definePrompt({
   output: {schema: GenerateImageNameOutputSchema},
   prompt: `You are an expert in generating descriptive filenames for images.
 
-  Given the content of the image, generate a descriptive filename in Spanish, lowercase, and hyphenated.
+  Given the content of the image, generate a descriptive filename that is lowercase and hyphenated.
 
-  For example, if the image contains a plant in a white pot on a table, the filename should be "planta-en-maceta-blanca-sobre-mesa".
+  Language: {{language}}
+
+  Instructions:
+  - If language is "spanish": Generate the filename in Spanish. For example, if the image contains a plant in a white pot on a table, the filename should be "planta-en-maceta-blanca-sobre-mesa".
+  - If language is "english": Generate the filename in English. For example, if the image contains a plant in a white pot on a table, the filename should be "plant-in-white-pot-on-table".
 
   Image: {{media url=photoDataUri}}`,
 });
