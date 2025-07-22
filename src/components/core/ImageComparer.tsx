@@ -59,13 +59,16 @@ export function ImageComparer({
           <div className="relative w-full h-full">
             {originalLoadingActive && <Skeleton className="absolute inset-0 w-full h-full rounded-md" />}
             <NextImage
-              src={originalSrc!} 
+              src={originalSrc!}
               alt={originalAlt}
-              layout="fill"
-              objectFit="contain"
-              className={cn("rounded-md transition-opacity duration-300", originalLoadingActive ? "opacity-0" : "opacity-100")}
+              fill
+              style={{ objectFit: "contain" }}
+              className={cn(
+                "rounded-md transition-opacity duration-300",
+                originalLoadingActive ? "opacity-0" : "opacity-100"
+              )}
               onLoadingComplete={() => setIsLoadingOriginal(false)}
-              onError={() => setIsLoadingOriginal(false)} 
+              onError={() => setIsLoadingOriginal(false)}
             />
              <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded">
               Original (JPG/PNG)
@@ -82,11 +85,14 @@ export function ImageComparer({
              <div className="relative w-full h-full">
               {convertedLoadingActive && <Skeleton className="absolute inset-0 w-full h-full rounded-md" />}
               <NextImage
-                src={convertedSrc!} 
+                src={convertedSrc!}
                 alt={convertedAlt}
-                layout="fill"
-                objectFit="contain"
-                className={cn("rounded-md transition-opacity duration-300", convertedLoadingActive ? "opacity-0" : "opacity-100")}
+                fill
+                style={{ objectFit: "contain" }}
+                className={cn(
+                  "rounded-md transition-opacity duration-300",
+                  convertedLoadingActive ? "opacity-0" : "opacity-100"
+                )}
                 onLoadingComplete={() => setIsLoadingConverted(false)}
                 onError={() => setIsLoadingConverted(false)}
               />
@@ -104,9 +110,12 @@ export function ImageComparer({
                 <NextImage
                     src={convertedSrc!}
                     alt={convertedAlt}
-                    layout="fill"
-                    objectFit="contain"
-                    className={cn("rounded-md transition-opacity duration-300", convertedLoadingActive ? "opacity-0" : "opacity-100")}
+                    fill
+                    style={{ objectFit: "contain" }}
+                    className={cn(
+                      "rounded-md transition-opacity duration-300",
+                      convertedLoadingActive ? "opacity-0" : "opacity-100"
+                    )}
                     onLoadingComplete={() => setIsLoadingConverted(false)}
                     onError={() => setIsLoadingConverted(false)}
                 />
