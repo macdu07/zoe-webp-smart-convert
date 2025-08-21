@@ -290,10 +290,8 @@ export default function ConversionPage() {
                 </div>
 
                 <ImageComparer
-                  originalSrc={originalImage?.dataUrl}
-                  convertedSrc={convertedImage?.dataUrl}
-                  originalAlt={originalImage?.name || "Original image placeholder"}
-                  convertedAlt={finalName || "Converted image placeholder"}
+                  original={originalImage?.dataUrl}
+                  converted={convertedImage?.dataUrl}
                   aspectRatio={originalImage ? `${originalImage.width}/${originalImage.height}` : "3/2"}
                 />
                 
@@ -350,3 +348,4 @@ export default function ConversionPage() {
   );
 }
 
+    
