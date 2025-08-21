@@ -54,7 +54,7 @@ export function ImageComparer({
       window.removeEventListener('mouseup', stopResizing);
       window.removeEventListener('touchend', stopResizing);
     };
-  }, [isResizing]);
+  }, [isResizing, handleMove]);
 
   const showOriginal = !!original;
   const showConverted = !!converted;
@@ -83,15 +83,11 @@ export function ImageComparer({
               className="rounded-md"
               unoptimized
             />
-            <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded">
-              Original (JPG/PNG)
-            </div>
           </div>
         )}
-
+        
         {/* Converted Image (clipped) */}
         {showBoth && (
-          <>
             <div
               className="absolute top-0 left-0 h-full w-full overflow-hidden"
               style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
@@ -104,22 +100,33 @@ export function ImageComparer({
                 className="rounded-md"
                 unoptimized
               />
-              <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded">
-                Converted (WebP)
-              </div>
             </div>
-            {/* Slider Handle */}
-            <div
-              className="absolute top-0 h-full w-1 bg-primary cursor-ew-resize"
-              style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
-              onMouseDown={handleResize}
-              onTouchStart={handleResize}
-            >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <MoveHorizontal className="h-4 w-4" />
-              </div>
+        )}
+        
+        {/* Labels - Rendered on top so they are always visible */}
+        {showBoth && (
+          <>
+            <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded z-10">
+              Original (JPG/PNG)
+            </div>
+            <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-0.5 text-xs rounded z-10">
+              Converted (WebP)
             </div>
           </>
+        )}
+        
+        {/* Slider Handle */}
+        {showBoth && (
+          <div
+            className="absolute top-0 h-full w-1 bg-primary cursor-ew-resize z-20"
+            style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+            onMouseDown={handleResize}
+            onTouchStart={handleResize}
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+              <MoveHorizontal className="h-4 w-4" />
+            </div>
+          </div>
         )}
         
         {!showOriginal && showConverted && (
@@ -149,5 +156,3 @@ export function ImageComparer({
     </div>
   );
 }
-
-    
