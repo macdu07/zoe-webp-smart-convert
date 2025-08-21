@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ImageComparer } from './ImageComparer';
 import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay, LogOut, Trash2 } from 'lucide-react';
@@ -29,6 +30,7 @@ export default function ConversionPage() {
   const [error, setError] = useState<string | null>(null);
   const [compressionQuality, setCompressionQuality] = useState(90); // 5-100
   const [language, setLanguage] = useState<'spanish' | 'english'>('spanish');
+  const [useAiForName, setUseAiForName] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,22 +73,34 @@ export default function ConversionPage() {
     setFinalName('Generando nombre...');
 
     try {
-      // Pass quality as 0-1 range
-      const webpResult = await convertToWebP(originalImage, { quality: compressionQuality / 100, targetMaxKB: 800, targetWidth: 1920 });
+      const webpResult = await convertToWebP(originalImage, { quality: compressionQuality / 100 });
       setConvertedImage(webpResult);
       toast({ title: 'Conversión Exitosa', description: `Imagen convertida a WebP (${formatBytes(webpResult.sizeBytes)}).` });
 
-      const aiInput: GenerateImageNameInput = { photoDataUri: originalImage.dataUrl, language };
-      const aiOutput = await generateImageName(aiInput);
-      
-      let generatedName = aiOutput.filename;
-      if (prefix.trim()) {
-        generatedName = `${prefix.trim().toLowerCase().replace(/\s+/g, '-')}-${generatedName}`;
-      }
-      const completeFinalName = `${generatedName}.webp`;
-      setFinalName(completeFinalName);
+      let finalBaseName = 'converted-image';
 
-      toast({ title: 'Nombre Generado por IA', description: `Sugerencia: ${completeFinalName}` });
+      if (useAiForName) {
+        const aiInput: GenerateImageNameInput = { photoDataUri: originalImage.dataUrl, language };
+        const aiOutput = await generateImageName(aiInput);
+        let generatedName = aiOutput.filename;
+        if (prefix.trim()) {
+          generatedName = `${prefix.trim().toLowerCase().replace(/\s+/g, '-')}-${generatedName}`;
+        }
+        finalBaseName = generatedName;
+        toast({ title: 'Nombre Generado por IA', description: `Sugerencia: ${finalBaseName}.webp` });
+      } else {
+        const trimmedPrefix = prefix.trim().toLowerCase().replace(/\s+/g, '-');
+        if (trimmedPrefix) {
+            finalBaseName = trimmedPrefix;
+        } else {
+            // Use original filename without extension if no prefix
+            const lastDotIndex = originalImage.name.lastIndexOf('.');
+            finalBaseName = originalImage.name.substring(0, lastDotIndex).toLowerCase().replace(/\s+/g, '-');
+        }
+      }
+      
+      const completeFinalName = `${finalBaseName}.webp`;
+      setFinalName(completeFinalName);
 
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Ocurrió un error desconocido.';
@@ -144,6 +158,7 @@ export default function ConversionPage() {
     setError(null);
     setCompressionQuality(90); // Reset to default
     setLanguage('spanish'); // Reset to default
+    setUseAiForName(true); // Reset to default
     if (fileInputRef.current) {
       fileInputRef.current.value = ''; // Clear the file input
     }
@@ -199,31 +214,40 @@ export default function ConversionPage() {
                   className="hidden"
                 />
               </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch id="use-ai-name" checked={useAiForName} onCheckedChange={setUseAiForName} />
+                <Label htmlFor="use-ai-name" className="text-sm font-medium">Use AI for file name</Label>
+              </div>
               
               <div>
-                <Label htmlFor="prefix" className="text-xs font-medium text-muted-foreground">Optional file name prefix</Label>
+                <Label htmlFor="prefix" className="text-xs font-medium text-muted-foreground">
+                    {useAiForName ? "Optional file name prefix" : "Manual file name prefix"}
+                </Label>
                 <Input
                   id="prefix"
                   type="text"
                   value={prefix}
                   onChange={(e) => setPrefix(e.target.value)}
-                  placeholder="e.g., product-image-"
+                  placeholder={useAiForName ? "e.g., product-image-" : "your-file-name"}
                   className="mt-1 bg-input text-foreground border-border focus:bg-background placeholder:text-muted-foreground/70"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="language" className="text-xs font-medium text-muted-foreground">AI filename language</Label>
-                <Select value={language} onValueChange={(value: 'spanish' | 'english') => setLanguage(value)}>
-                  <SelectTrigger className="mt-1 bg-input text-foreground border-border focus:bg-background">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="spanish">🇪🇸 Español</SelectItem>
-                    <SelectItem value="english">🇺🇸 English</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {useAiForName && (
+                <div>
+                  <Label htmlFor="language" className="text-xs font-medium text-muted-foreground">AI filename language</Label>
+                  <Select value={language} onValueChange={(value: 'spanish' | 'english') => setLanguage(value)}>
+                    <SelectTrigger className="mt-1 bg-input text-foreground border-border focus:bg-background">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="spanish">🇪🇸 Español</SelectItem>
+                      <SelectItem value="english">🇺🇸 English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div>
                 <div className="flex justify-between items-center mb-1">
@@ -266,7 +290,9 @@ export default function ConversionPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="finalName" className="text-xs font-medium text-muted-foreground">Suggested File Name (by Gemini)</Label>
+                  <Label htmlFor="finalName" className="text-xs font-medium text-muted-foreground">
+                    {useAiForName ? "Suggested File Name (by Gemini)" : "File Name"}
+                  </Label>
                   <div className="relative mt-1">
                     <Input
                       id="finalName"
