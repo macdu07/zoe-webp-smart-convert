@@ -1,173 +1,169 @@
-
 "use client";
 
-import { useState, useRef, type ChangeEvent } from 'react';
-import Image from 'next/image'; // Keep next/image for optimized images
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { ImageComparer } from './ImageComparer';
-import { UploadCloud, Download, Sparkles, Info, Loader2, Copy, HelpCircle, ImagePlay, LogOut, Trash2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { generateImageName, type GenerateImageNameInput } from '@/ai/flows/generate-image-name';
-import { getImageMetadata, convertToWebP, formatBytes, type ImageMetadata, type WebPConversionResult } from '@/lib/imageUtils';
-import { logout } from '@/lib/auth';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { HelpCircle, ImagePlay, LogOut } from "lucide-react";
+import {
+  generateImageName,
+  type GenerateImageNameInput,
+} from "@/ai/flows/generate-image-name";
+import {
+  getImageMetadata,
+  convertToWebP,
+  formatBytes,
+  type ImageMetadata,
+  type WebPConversionResult,
+} from "@/lib/imageUtils";
+import { logoutAction } from "@/app/actions";
+import { ImageUploader } from "./ImageUploader";
+import { ConversionControls } from "./ConversionControls";
+import { ConversionResult } from "./ConversionResult";
 
 export default function ConversionPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [originalImage, setOriginalImage] = useState<ImageMetadata | null>(null);
-  const [convertedImage, setConvertedImage] = useState<WebPConversionResult | null>(null);
-  const [prefix, setPrefix] = useState('');
-  const [finalName, setFinalName] = useState('your-awesome-image.webp');
+  const [originalImage, setOriginalImage] = useState<ImageMetadata | null>(
+    null
+  );
+  const [convertedImage, setConvertedImage] =
+    useState<WebPConversionResult | null>(null);
+  const [prefix, setPrefix] = useState("");
+  const [finalName, setFinalName] = useState("your-awesome-image.webp");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compressionQuality, setCompressionQuality] = useState(90); // 5-100
-  const [language, setLanguage] = useState<'spanish' | 'english'>('spanish');
+  const [language, setLanguage] = useState<"spanish" | "english">("spanish");
   const [useAiForName, setUseAiForName] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-        toast({ title: 'Tipo de archivo no válido', description: 'Por favor, sube una imagen JPG, JPEG o PNG.', variant: 'destructive' });
-        setSelectedFile(null);
-        setOriginalImage(null);
-        setConvertedImage(null);
-        setFinalName('your-awesome-image.webp');
-        return;
-      }
-      setSelectedFile(file);
-      setError(null);
-      setConvertedImage(null);
-      setFinalName('your-awesome-image.webp'); 
-      try {
-        const metadata = await getImageMetadata(file);
-        setOriginalImage(metadata);
-      } catch (e) {
-        const errorMsg = e instanceof Error ? e.message : 'Error al procesar la imagen.';
-        toast({ title: 'Error de Carga', description: errorMsg, variant: 'destructive' });
-        setError(errorMsg);
-        setOriginalImage(null);
-      }
+  const handleFileSelect = async (file: File) => {
+    setSelectedFile(file);
+    setError(null);
+    setConvertedImage(null);
+    setFinalName("your-awesome-image.webp");
+    try {
+      const metadata = await getImageMetadata(file);
+      setOriginalImage(metadata);
+    } catch (e) {
+      const errorMsg =
+        e instanceof Error ? e.message : "Error al procesar la imagen.";
+      toast({
+        title: "Error de Carga",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      setError(errorMsg);
+      setOriginalImage(null);
     }
   };
 
   const handleConvert = async () => {
     if (!selectedFile || !originalImage) {
-      toast({ title: 'No hay imagen', description: 'Por favor, sube una imagen primero.', variant: 'destructive' });
+      toast({
+        title: "No hay imagen",
+        description: "Por favor, sube una imagen primero.",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsLoading(true);
     setError(null);
-    setFinalName('Generando nombre...');
+    setFinalName("Generando nombre...");
 
     try {
-      const webpResult = await convertToWebP(originalImage, { quality: compressionQuality / 100 });
+      const webpResult = await convertToWebP(originalImage, {
+        quality: compressionQuality / 100,
+      });
       setConvertedImage(webpResult);
-      toast({ title: 'Conversión Exitosa', description: `Imagen convertida a WebP (${formatBytes(webpResult.sizeBytes)}).` });
+      toast({
+        title: "Conversión Exitosa",
+        description: `Imagen convertida a WebP (${formatBytes(
+          webpResult.sizeBytes
+        )}).`,
+      });
 
-      let finalBaseName = 'converted-image';
+      let finalBaseName = "converted-image";
 
       if (useAiForName) {
-        const aiInput: GenerateImageNameInput = { photoDataUri: originalImage.dataUrl, language };
+        // Optimize for AI: Resize image to max 512px width to reduce payload
+        const smallImage = await convertToWebP(originalImage, {
+          targetWidth: 512,
+          quality: 0.6,
+        });
+
+        const aiInput: GenerateImageNameInput = {
+          photoDataUri: smallImage.dataUrl,
+          language,
+        };
         const aiOutput = await generateImageName(aiInput);
         let generatedName = aiOutput.filename;
         if (prefix.trim()) {
-          generatedName = `${prefix.trim().toLowerCase().replace(/\s+/g, '-')}-${generatedName}`;
+          generatedName = `${prefix
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, "-")}-${generatedName}`;
         }
         finalBaseName = generatedName;
-        toast({ title: 'Nombre Generado por IA', description: `Sugerencia: ${finalBaseName}.webp` });
+        toast({
+          title: "Nombre Generado por IA",
+          description: `Sugerencia: ${finalBaseName}.webp`,
+        });
       } else {
-        const trimmedPrefix = prefix.trim().toLowerCase().replace(/\s+/g, '-');
+        const trimmedPrefix = prefix.trim().toLowerCase().replace(/\s+/g, "-");
         if (trimmedPrefix) {
-            finalBaseName = trimmedPrefix;
+          finalBaseName = trimmedPrefix;
         } else {
-            // Use original filename without extension if no prefix
-            const lastDotIndex = originalImage.name.lastIndexOf('.');
-            finalBaseName = originalImage.name.substring(0, lastDotIndex).toLowerCase().replace(/\s+/g, '-');
+          // Use original filename without extension if no prefix
+          const lastDotIndex = originalImage.name.lastIndexOf(".");
+          finalBaseName = originalImage.name
+            .substring(0, lastDotIndex)
+            .toLowerCase()
+            .replace(/\s+/g, "-");
         }
       }
-      
+
       const completeFinalName = `${finalBaseName}.webp`;
       setFinalName(completeFinalName);
-
     } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : 'Ocurrió un error desconocido.';
+      const errorMsg =
+        e instanceof Error ? e.message : "Ocurrió un error desconocido.";
       console.error("Conversion/Naming Error:", e);
-      toast({ title: 'Error en el Proceso', description: errorMsg, variant: 'destructive' });
+      toast({
+        title: "Error en el Proceso",
+        description: errorMsg,
+        variant: "destructive",
+      });
       setError(errorMsg);
       setConvertedImage(null);
-      setFinalName('error-al-generar.webp');
+      setFinalName("error-al-generar.webp");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownload = () => {
-    if (!convertedImage?.dataUrl || !finalName || finalName.includes("Generando") || finalName.includes("error")) {
-      toast({ title: 'Error de Descarga', description: 'No hay imagen convertida válida para descargar.', variant: 'destructive' });
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = convertedImage.dataUrl;
-    link.download = finalName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast({ title: 'Descarga Iniciada', description: `Descargando ${finalName}` });
-  };
-  
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleCopyName = () => {
-    if (finalName && !finalName.includes("Generando") && !finalName.includes("error")) {
-      navigator.clipboard.writeText(finalName)
-        .then(() => toast({ title: 'Nombre Copiado', description: `${finalName} copiado al portapapeles.` }))
-        .catch(err => toast({ title: 'Error al Copiar', description: 'No se pudo copiar el nombre.', variant: 'destructive' }));
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    toast({
-      title: 'Sesión cerrada',
-      description: 'Has cerrado sesión correctamente.',
-    });
-    router.push('/login');
+  const handleLogout = async () => {
+    await logoutAction();
   };
 
   const handleClear = () => {
     setSelectedFile(null);
     setOriginalImage(null);
     setConvertedImage(null);
-    setPrefix('');
-    setFinalName('your-awesome-image.webp');
+    setPrefix("");
+    setFinalName("your-awesome-image.webp");
     setError(null);
     setCompressionQuality(90); // Reset to default
-    setLanguage('spanish'); // Reset to default
+    setLanguage("spanish"); // Reset to default
     setUseAiForName(true); // Reset to default
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Clear the file input
-    }
-    toast({ title: 'Formulario Limpiado', description: 'Puedes subir una nueva imagen.' });
+    toast({
+      title: "Formulario Limpiado",
+      description: "Puedes subir una nueva imagen.",
+    });
   };
-  
-  const reductionPercentage = originalImage && convertedImage 
-    ? Math.round((1 - convertedImage.sizeBytes / originalImage.sizeBytes) * 100) 
-    : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -178,10 +174,19 @@ export default function ConversionPage() {
             <h1 className="text-xl md:text-2xl font-semibold">Zoe Convert</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+            >
               <HelpCircle className="mr-1 h-4 w-4" /> Help
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <LogOut className="mr-1 h-4 w-4" /> Logout
             </Button>
           </div>
@@ -193,185 +198,61 @@ export default function ConversionPage() {
           {/* Left Column: Controls & Info */}
           <Card className="shadow-lg bg-card text-card-foreground">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold">Convert your images to smart WebP</CardTitle>
+              <CardTitle className="text-xl font-semibold">
+                Convert your images to smart WebP
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div
-                onClick={triggerFileInput}
-                className="mt-1 flex flex-col items-center justify-center p-8 rounded-md border-2 border-dashed border-primary/40 hover:border-primary cursor-pointer bg-background/30 transition-colors"
-              >
-                <UploadCloud className="h-12 w-12 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium text-card-foreground">
-                  {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
-                </p>
-                <p className="text-xs text-muted-foreground">JPG, JPEG, or PNG</p>
-                <Input
-                  id="file-upload"
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept=".jpg,.jpeg,.png"
-                  className="hidden"
-                />
-              </div>
+              <ImageUploader
+                selectedFile={selectedFile}
+                onFileSelect={handleFileSelect}
+                onError={(msg) => {
+                  toast({
+                    title: "Error",
+                    description: msg,
+                    variant: "destructive",
+                  });
+                  setError(msg);
+                }}
+                onClear={handleClear}
+              />
 
-              <div className="flex items-center space-x-2">
-                <Switch id="use-ai-name" checked={useAiForName} onCheckedChange={setUseAiForName} />
-                <Label htmlFor="use-ai-name" className="text-sm font-medium">Use AI for file name</Label>
-              </div>
-              
-              <div>
-                <Label htmlFor="prefix" className="text-xs font-medium text-muted-foreground">
-                    {useAiForName ? "Optional file name prefix" : "Manual file name prefix"}
-                </Label>
-                <Input
-                  id="prefix"
-                  type="text"
-                  value={prefix}
-                  onChange={(e) => setPrefix(e.target.value)}
-                  placeholder={useAiForName ? "e.g., product-image-" : "your-file-name"}
-                  className="mt-1 bg-input text-foreground border-border focus:bg-background placeholder:text-muted-foreground/70"
-                />
-              </div>
-
-              {useAiForName && (
-                <div>
-                  <Label htmlFor="language" className="text-xs font-medium text-muted-foreground">AI filename language</Label>
-                  <Select value={language} onValueChange={(value: 'spanish' | 'english') => setLanguage(value)}>
-                    <SelectTrigger className="mt-1 bg-input text-foreground border-border focus:bg-background">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="spanish">🇪🇸 Español</SelectItem>
-                      <SelectItem value="english">🇺🇸 English</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <Label htmlFor="compressionQuality" className="text-xs font-medium text-muted-foreground">
-                    WebP Quality Level
-                  </Label>
-                  <span className="text-sm font-semibold text-primary">{compressionQuality}%</span>
-                </div>
-                <Slider
-                  id="compressionQuality"
-                  min={5}
-                  max={100}
-                  step={1}
-                  value={[compressionQuality]}
-                  onValueChange={(value) => setCompressionQuality(value[0])}
-                  className="w-full [&>span:last-child]:bg-primary [&>span:last-child]:border-primary-foreground"
-                  aria-label="WebP compression quality"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Lower values mean smaller files but lower quality.</p>
-              </div>
-
-              <div className="flex gap-4">
-                <Button onClick={handleConvert} disabled={isLoading || !selectedFile} className="flex-grow font-semibold py-3 text-base">
-                  {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
-                  {isLoading ? 'Processing...' : 'Convert and Analyze'}
-                </Button>
-                <Button onClick={handleClear} variant="outline" className="font-semibold py-3 text-base" disabled={!selectedFile && !originalImage && !convertedImage}>
-                  <Trash2 className="mr-2 h-5 w-5" />
-                  Clear
-                </Button>
-              </div>
+              <ConversionControls
+                useAiForName={useAiForName}
+                setUseAiForName={setUseAiForName}
+                prefix={prefix}
+                setPrefix={setPrefix}
+                language={language}
+                setLanguage={setLanguage}
+                compressionQuality={compressionQuality}
+                setCompressionQuality={setCompressionQuality}
+                onConvert={handleConvert}
+                onClear={handleClear}
+                isLoading={isLoading}
+                hasFile={!!selectedFile}
+                hasResult={!!convertedImage}
+              />
             </CardContent>
           </Card>
 
           {/* Right Column: Image Comparer & Results */}
-          <div className="space-y-6">
-            <Card className="shadow-lg bg-card text-card-foreground">
-              <CardHeader>
-                  <CardTitle className="text-xl font-semibold">Conversion result</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="finalName" className="text-xs font-medium text-muted-foreground">
-                    {useAiForName ? "Suggested File Name (by Gemini)" : "File Name"}
-                  </Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="finalName"
-                      type="text"
-                      value={finalName}
-                      readOnly
-                      className="pr-10 bg-input text-foreground border-border placeholder:text-muted-foreground/70"
-                      aria-label="Suggested file name"
-                    />
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      onClick={handleCopyName}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-primary"
-                      aria-label="Copy file name"
-                      disabled={finalName.includes("Generando") || finalName.includes("error")}
-                    >
-                      <Copy className="h-4 w-4"/>
-                    </Button>
-                  </div>
-                </div>
-
-                <ImageComparer
-                  original={originalImage?.dataUrl}
-                  converted={convertedImage?.dataUrl}
-                  aspectRatio={originalImage ? `${originalImage.width}/${originalImage.height}` : "3/2"}
-                />
-                
-                <div className="space-y-2 text-sm pt-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Quality Setting:</span>
-                    <span className="font-medium">{compressionQuality}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Original Size:</span>
-                    <span className="font-medium">{originalImage ? formatBytes(originalImage.sizeBytes) : '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Converted Size:</span>
-                    <span className="font-medium">{convertedImage ? formatBytes(convertedImage.sizeBytes) : '-'}</span>
-                  </div>
-                  <div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Size Reduction:</span>
-                        <span className="font-medium">{reductionPercentage}%</span> 
-                    </div>
-                    <Progress 
-                        value={reductionPercentage} 
-                        className="h-2 mt-1 bg-primary/20" 
-                        aria-label="Image size reduction percentage"
-                    />
-                  </div>
-                </div>
-
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleDownload} className="w-full font-semibold py-3 text-base" variant="default" disabled={!convertedImage || isLoading || finalName.includes("Generando") || finalName.includes("error")}>
-                  <Download className="mr-2 h-5 w-5" />
-                  Download WebP Image
-                </Button>
-              </CardFooter>
-            </Card>
-            
-            {error && (
-              <Alert variant="destructive" className="mt-6">
-                <Info className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-          </div>
+          <ConversionResult
+            originalImage={originalImage}
+            convertedImage={convertedImage}
+            finalName={finalName}
+            compressionQuality={compressionQuality}
+            isLoading={isLoading}
+            error={error}
+            useAiForName={useAiForName}
+          />
         </div>
       </main>
 
       <footer className="bg-background border-t border-border text-center py-4 mt-auto">
-        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Zoe Convert. All rights reserved.</p>
+        <p className="text-sm text-muted-foreground">
+          &copy; {new Date().getFullYear()} Zoe Convert. All rights reserved.
+        </p>
       </footer>
     </div>
   );
 }
-
-    
