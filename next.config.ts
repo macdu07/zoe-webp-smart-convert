@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -11,14 +11,15 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "placehold.co",
+        port: "",
+        pathname: "/**",
       },
     ],
-     domains: ['placehold.co'], // Keep this if you had it, or remove if remotePatterns is enough
+    domains: ["placehold.co"], // Keep this if you had it, or remove if remotePatterns is enough
   },
+  serverExternalPackages: ["express", "genkit", "@genkit-ai/googleai", "sharp"],
 };
 
 export default nextConfig;
