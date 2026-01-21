@@ -77,10 +77,7 @@ export function ConversionControls({
 
       {useAiForName && (
         <div>
-          <Label
-            htmlFor="language"
-            className="text-xs font-medium text-muted-foreground"
-          >
+          <Label className="text-xs font-medium text-muted-foreground">
             AI filename language
           </Label>
           <Select
@@ -100,10 +97,7 @@ export function ConversionControls({
 
       <div>
         <div className="flex justify-between items-center mb-1">
-          <Label
-            htmlFor="compressionQuality"
-            className="text-xs font-medium text-muted-foreground"
-          >
+          <Label className="text-xs font-medium text-muted-foreground">
             WebP Quality Level
           </Label>
           <span className="text-sm font-semibold text-primary">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,129 +20,170 @@ import {
 import { logoutAction } from "@/app/actions";
 import { ImageUploader } from "./ImageUploader";
 import { ConversionControls } from "./ConversionControls";
-import { ConversionResult } from "./ConversionResult";
+import {
+  ConversionResultList,
+  type ConversionItem,
+} from "./ConversionResultList";
 
 export default function ConversionPage() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [originalImage, setOriginalImage] = useState<ImageMetadata | null>(
-    null
-  );
-  const [convertedImage, setConvertedImage] =
-    useState<WebPConversionResult | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [conversionItems, setConversionItems] = useState<ConversionItem[]>([]);
   const [prefix, setPrefix] = useState("");
-  const [finalName, setFinalName] = useState("your-awesome-image.webp");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [compressionQuality, setCompressionQuality] = useState(90); // 5-100
+  const [compressionQuality, setCompressionQuality] = useState(90);
   const [language, setLanguage] = useState<"spanish" | "english">("spanish");
   const [useAiForName, setUseAiForName] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleFileSelect = async (file: File) => {
-    setSelectedFile(file);
-    setError(null);
-    setConvertedImage(null);
-    setFinalName("your-awesome-image.webp");
+  const handleFilesSelect = useCallback((files: File[]) => {
+    setSelectedFiles(files);
+    // Reset conversion items when new files are selected
+    setConversionItems([]);
+  }, []);
+
+  const processImage = async (
+    file: File,
+    itemId: string,
+  ): Promise<Partial<ConversionItem>> => {
     try {
+      // Get metadata
       const metadata = await getImageMetadata(file);
-      setOriginalImage(metadata);
-    } catch (e) {
-      const errorMsg =
-        e instanceof Error ? e.message : "Error al procesar la imagen.";
-      toast({
-        title: "Error de Carga",
-        description: errorMsg,
-        variant: "destructive",
-      });
-      setError(errorMsg);
-      setOriginalImage(null);
-    }
-  };
 
-  const handleConvert = async () => {
-    if (!selectedFile || !originalImage) {
-      toast({
-        title: "No hay imagen",
-        description: "Por favor, sube una imagen primero.",
-        variant: "destructive",
-      });
-      return;
-    }
+      // Update status to processing
+      setConversionItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? { ...item, originalMetadata: metadata, status: "processing" }
+            : item,
+        ),
+      );
 
-    setIsLoading(true);
-    setError(null);
-    setFinalName("Generando nombre...");
-
-    try {
-      const webpResult = await convertToWebP(originalImage, {
+      // Convert to WebP
+      const webpResult = await convertToWebP(metadata, {
         quality: compressionQuality / 100,
       });
-      setConvertedImage(webpResult);
-      toast({
-        title: "Conversión Exitosa",
-        description: `Imagen convertida a WebP (${formatBytes(
-          webpResult.sizeBytes
-        )}).`,
-      });
 
+      // Generate name
       let finalBaseName = "converted-image";
 
       if (useAiForName) {
-        // Optimize for AI: Resize image to max 512px width to reduce payload
-        const smallImage = await convertToWebP(originalImage, {
-          targetWidth: 512,
-          quality: 0.6,
-        });
-
-        const aiInput: GenerateImageNameInput = {
-          photoDataUri: smallImage.dataUrl,
-          language,
-        };
-        const aiOutput = await generateImageName(aiInput);
-        let generatedName = aiOutput.filename;
-        if (prefix.trim()) {
-          generatedName = `${prefix
-            .trim()
+        try {
+          const smallImage = await convertToWebP(metadata, {
+            targetWidth: 512,
+            quality: 0.6,
+          });
+          const aiInput: GenerateImageNameInput = {
+            photoDataUri: smallImage.dataUrl,
+            language,
+          };
+          const aiOutput = await generateImageName(aiInput);
+          let generatedName = aiOutput.filename;
+          if (prefix.trim()) {
+            generatedName = `${prefix
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, "-")}-${generatedName}`;
+          }
+          finalBaseName = generatedName;
+        } catch (aiError) {
+          console.error("AI naming error:", aiError);
+          // Fallback to original filename
+          const lastDotIndex = file.name.lastIndexOf(".");
+          finalBaseName = file.name
+            .substring(0, lastDotIndex)
             .toLowerCase()
-            .replace(/\s+/g, "-")}-${generatedName}`;
+            .replace(/\s+/g, "-");
+          if (prefix.trim()) {
+            finalBaseName = `${prefix
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, "-")}-${finalBaseName}`;
+          }
         }
-        finalBaseName = generatedName;
-        toast({
-          title: "Nombre Generado por IA",
-          description: `Sugerencia: ${finalBaseName}.webp`,
-        });
       } else {
         const trimmedPrefix = prefix.trim().toLowerCase().replace(/\s+/g, "-");
         if (trimmedPrefix) {
           finalBaseName = trimmedPrefix;
         } else {
-          // Use original filename without extension if no prefix
-          const lastDotIndex = originalImage.name.lastIndexOf(".");
-          finalBaseName = originalImage.name
+          const lastDotIndex = file.name.lastIndexOf(".");
+          finalBaseName = file.name
             .substring(0, lastDotIndex)
             .toLowerCase()
             .replace(/\s+/g, "-");
         }
       }
 
-      const completeFinalName = `${finalBaseName}.webp`;
-      setFinalName(completeFinalName);
+      // Add unique suffix: YYMMDD-XXXXX (date + random 5-digit number)
+      const now = new Date();
+      const datePart = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      const randomPart = String(Math.floor(Math.random() * 100000)).padStart(
+        5,
+        "0",
+      );
+      const finalName = `${finalBaseName}-${datePart}-${randomPart}.webp`;
+
+      return {
+        originalMetadata: metadata,
+        convertedResult: webpResult,
+        finalName,
+        status: "done",
+      };
     } catch (e) {
       const errorMsg =
-        e instanceof Error ? e.message : "Ocurrió un error desconocido.";
-      console.error("Conversion/Naming Error:", e);
+        e instanceof Error ? e.message : "Error desconocido al procesar.";
+      return {
+        status: "error",
+        error: errorMsg,
+      };
+    }
+  };
+
+  const handleConvert = async () => {
+    if (selectedFiles.length === 0) {
       toast({
-        title: "Error en el Proceso",
-        description: errorMsg,
+        title: "No hay imágenes",
+        description: "Por favor, sube al menos una imagen.",
         variant: "destructive",
       });
-      setError(errorMsg);
-      setConvertedImage(null);
-      setFinalName("error-al-generar.webp");
-    } finally {
-      setIsLoading(false);
+      return;
     }
+
+    setIsLoading(true);
+
+    // Initialize conversion items
+    const initialItems: ConversionItem[] = selectedFiles.map((file, index) => ({
+      id: `${file.name}-${index}-${Date.now()}`,
+      originalFile: file,
+      originalMetadata: null,
+      convertedResult: null,
+      finalName: file.name,
+      status: "pending",
+    }));
+    setConversionItems(initialItems);
+
+    // Process images sequentially to avoid overwhelming the AI
+    for (const item of initialItems) {
+      setConversionItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id ? { ...i, status: "processing" } : i,
+        ),
+      );
+
+      const result = await processImage(item.originalFile, item.id);
+
+      setConversionItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, ...result } : i)),
+      );
+    }
+
+    setIsLoading(false);
+
+    const doneCount = initialItems.length; // Will be updated by state
+    toast({
+      title: "Conversión Completada",
+      description: `Se procesaron ${selectedFiles.length} imagen(es).`,
+    });
   };
 
   const handleLogout = async () => {
@@ -150,18 +191,15 @@ export default function ConversionPage() {
   };
 
   const handleClear = () => {
-    setSelectedFile(null);
-    setOriginalImage(null);
-    setConvertedImage(null);
+    setSelectedFiles([]);
+    setConversionItems([]);
     setPrefix("");
-    setFinalName("your-awesome-image.webp");
-    setError(null);
-    setCompressionQuality(90); // Reset to default
-    setLanguage("spanish"); // Reset to default
-    setUseAiForName(true); // Reset to default
+    setCompressionQuality(90);
+    setLanguage("spanish");
+    setUseAiForName(true);
     toast({
       title: "Formulario Limpiado",
-      description: "Puedes subir una nueva imagen.",
+      description: "Puedes subir nuevas imágenes.",
     });
   };
 
@@ -204,15 +242,14 @@ export default function ConversionPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <ImageUploader
-                selectedFile={selectedFile}
-                onFileSelect={handleFileSelect}
+                selectedFiles={selectedFiles}
+                onFilesSelect={handleFilesSelect}
                 onError={(msg) => {
                   toast({
                     title: "Error",
                     description: msg,
                     variant: "destructive",
                   });
-                  setError(msg);
                 }}
                 onClear={handleClear}
               />
@@ -229,20 +266,16 @@ export default function ConversionPage() {
                 onConvert={handleConvert}
                 onClear={handleClear}
                 isLoading={isLoading}
-                hasFile={!!selectedFile}
-                hasResult={!!convertedImage}
+                hasFile={selectedFiles.length > 0}
+                hasResult={conversionItems.length > 0}
               />
             </CardContent>
           </Card>
 
-          {/* Right Column: Image Comparer & Results */}
-          <ConversionResult
-            originalImage={originalImage}
-            convertedImage={convertedImage}
-            finalName={finalName}
+          {/* Right Column: Results List */}
+          <ConversionResultList
+            items={conversionItems}
             compressionQuality={compressionQuality}
-            isLoading={isLoading}
-            error={error}
             useAiForName={useAiForName}
           />
         </div>
