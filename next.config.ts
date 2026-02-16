@@ -17,9 +17,18 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
-    domains: ["placehold.co"], // Keep this if you had it, or remove if remotePatterns is enough
+    domains: ["placehold.co"],
   },
   serverExternalPackages: ["express", "genkit", "@genkit-ai/googleai", "sharp"],
+  async rewrites() {
+    const insforgeUrl = process.env.NEXT_PUBLIC_INSFORGE_BASE_URL || 'https://zoeconvert.insforge.site';
+    return [
+      {
+        source: '/insforge-proxy/:path*',
+        destination: `${insforgeUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

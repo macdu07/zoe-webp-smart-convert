@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, ImagePlay, LogOut } from "lucide-react";
+import { HelpCircle, ImagePlay } from "lucide-react";
+import { UserButton } from "@insforge/nextjs";
 import {
   generateImageName,
   type GenerateImageNameInput,
@@ -17,7 +17,7 @@ import {
   type ImageMetadata,
   type WebPConversionResult,
 } from "@/lib/imageUtils";
-import { logoutAction } from "@/app/actions";
+
 import { ImageUploader } from "./ImageUploader";
 import { ConversionControls } from "./ConversionControls";
 import {
@@ -34,11 +34,16 @@ export default function ConversionPage() {
   const [language, setLanguage] = useState<"spanish" | "english">("spanish");
   const [useAiForName, setUseAiForName] = useState(true);
   const { toast } = useToast();
-  const router = useRouter();
+
 
   const handleFilesSelect = useCallback((files: File[]) => {
     setSelectedFiles(files);
     // Reset conversion items when new files are selected
+    setConversionItems([]);
+  }, []);
+
+  const handleRemoveFile = useCallback((index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
     setConversionItems([]);
   }, []);
 
@@ -186,9 +191,7 @@ export default function ConversionPage() {
     });
   };
 
-  const handleLogout = async () => {
-    await logoutAction();
-  };
+
 
   const handleClear = () => {
     setSelectedFiles([]);
@@ -211,7 +214,7 @@ export default function ConversionPage() {
             <ImagePlay className="h-6 w-6 text-primary" />
             <h1 className="text-xl md:text-2xl font-semibold">Zoe Convert</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -219,14 +222,7 @@ export default function ConversionPage() {
             >
               <HelpCircle className="mr-1 h-4 w-4" /> Help
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="mr-1 h-4 w-4" /> Logout
-            </Button>
+            <UserButton />
           </div>
         </div>
       </header>
@@ -244,6 +240,7 @@ export default function ConversionPage() {
               <ImageUploader
                 selectedFiles={selectedFiles}
                 onFilesSelect={handleFilesSelect}
+                onRemoveFile={handleRemoveFile}
                 onError={(msg) => {
                   toast({
                     title: "Error",
