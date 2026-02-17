@@ -52,9 +52,16 @@ export async function getUserProfile(
         .from("user_profiles")
         .select("*")
         .eq("user_id", userId)
-        .maybeSingle();
+        .limit(1);
 
-    if (data) return data as UserProfile;
+    if (error) {
+        console.error("Error fetching user profile:", error);
+    }
+
+    // Return existing profile if found
+    if (data && Array.isArray(data) && data.length > 0) {
+        return data[0] as UserProfile;
+    }
 
     // Auto-create a starter profile if not found
     const plan = PLANS.starter;
@@ -68,21 +75,27 @@ export async function getUserProfile(
             max_batch_size: plan.maxBatchSize,
             period_start: new Date().toISOString(),
         })
-        .select()
-        .single();
+        .select();
 
     if (insertErr) {
         console.error("Error creating user profile:", insertErr);
-        // Could be a race condition — try fetching again
+        // Likely a unique constraint violation (race condition) — fetch again
         const { data: retryData } = await insforge.database
             .from("user_profiles")
             .select("*")
             .eq("user_id", userId)
-            .maybeSingle();
-        return (retryData as UserProfile) ?? null;
+            .limit(1);
+        if (retryData && Array.isArray(retryData) && retryData.length > 0) {
+            return retryData[0] as UserProfile;
+        }
+        return null;
     }
 
-    return newProfile as UserProfile;
+    if (newProfile && Array.isArray(newProfile) && newProfile.length > 0) {
+        return newProfile[0] as UserProfile;
+    }
+
+    return null;
 }
 
 // ─── Check usage limits ──────────────────────────────────────────────

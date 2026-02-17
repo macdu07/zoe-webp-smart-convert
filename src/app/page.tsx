@@ -13,9 +13,16 @@ import {
   Download,
   ChevronDown,
 } from "lucide-react";
-import { SignedIn, SignedOut, UserButton } from "@insforge/nextjs";
+import { SignedIn, SignedOut, useUser } from "@insforge/nextjs";
 
 export default function LandingPage() {
+  const { user } = useUser();
+
+  const initial =
+    user?.profile?.name?.charAt(0)?.toUpperCase() ??
+    user?.email?.charAt(0)?.toUpperCase() ??
+    "U";
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Navbar */}
@@ -48,7 +55,15 @@ export default function LandingPage() {
                   Ir al Dashboard
                 </Button>
               </Link>
-              <UserButton />
+              <Link href="/dashboard/account">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary hover:bg-primary/20 transition-colors cursor-pointer overflow-hidden flex-shrink-0">
+                  {user?.profile?.avatar_url ? (
+                    <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    initial
+                  )}
+                </div>
+              </Link>
             </SignedIn>
           </div>
         </div>
