@@ -207,6 +207,144 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="max-w-5xl mx-auto px-6 py-24">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Planes y Precios
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Elige el plan que mejor se adapte a tus necesidades.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Starter Plan */}
+          <Card className="relative border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/30 hover:shadow-lg transition-all duration-300 flex flex-col">
+            <CardContent className="p-6 flex flex-col flex-grow">
+              <h3 className="text-xl font-bold mb-1">Starter</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-extrabold">Gratis</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Perfecto para probar la herramienta.
+              </p>
+              <ul className="space-y-3 text-sm mb-8 flex-grow">
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Conversión WebP ilimitada
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  50 renombrados con IA/mes
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Hasta 5 imágenes por lote
+                </li>
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className="font-bold">✗</span>
+                  Soporte prioritario
+                </li>
+              </ul>
+              <SignedOut>
+                <Link href="/signup">
+                  <Button variant="outline" className="w-full font-semibold">
+                    Comenzar Gratis
+                  </Button>
+                </Link>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/dashboard">
+                  <Button variant="outline" className="w-full font-semibold">
+                    Ir al Dashboard
+                  </Button>
+                </Link>
+              </SignedIn>
+            </CardContent>
+          </Card>
+
+          {/* Pro Plan */}
+          <Card className="relative border-primary/50 bg-card/50 backdrop-blur-sm shadow-lg shadow-primary/10 hover:shadow-primary/20 transition-all duration-300 flex flex-col ring-2 ring-primary/30">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
+                Popular
+              </span>
+            </div>
+            <CardContent className="p-6 flex flex-col flex-grow">
+              <h3 className="text-xl font-bold mb-1">Pro</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-extrabold">$7</span>
+                <span className="text-muted-foreground text-sm">/mes</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Ideal para creadores de contenido.
+              </p>
+              <ul className="space-y-3 text-sm mb-8 flex-grow">
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Conversión WebP ilimitada
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  3,000 renombrados con IA/mes
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Hasta 50 imágenes por lote
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Soporte prioritario
+                </li>
+              </ul>
+              <Button className="w-full font-semibold shadow-md">
+                Próximamente
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Agency Plan */}
+          <Card className="relative border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/30 hover:shadow-lg transition-all duration-300 flex flex-col">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span className="bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded-full">
+                Mejor Valor
+              </span>
+            </div>
+            <CardContent className="p-6 flex flex-col flex-grow">
+              <h3 className="text-xl font-bold mb-1">Agency</h3>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-extrabold">$24</span>
+                <span className="text-muted-foreground text-sm">/mes</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Para agencias y equipos grandes.
+              </p>
+              <ul className="space-y-3 text-sm mb-8 flex-grow">
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Conversión WebP ilimitada
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  20,000 renombrados con IA/mes
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Hasta 100 imágenes por lote
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  Soporte prioritario
+                </li>
+              </ul>
+              <Button className="w-full font-semibold shadow-md">
+                Próximamente
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="max-w-5xl mx-auto px-6 py-24">
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border border-primary/20 p-12 text-center">

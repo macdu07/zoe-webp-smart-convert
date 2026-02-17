@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, ImagePlay } from "lucide-react";
-import { UserButton } from "@insforge/nextjs";
+import { Sparkles } from "lucide-react";
+import { useUser } from "@insforge/nextjs";
 import {
   generateImageName,
   type GenerateImageNameInput,
@@ -17,6 +17,12 @@ import {
   type ImageMetadata,
   type WebPConversionResult,
 } from "@/lib/imageUtils";
+import {
+  checkUsageLimit,
+  logConversion,
+  getUserProfile,
+  type UsageCheck,
+} from "@/lib/usage";
 
 import { ImageUploader } from "./ImageUploader";
 import { ConversionControls } from "./ConversionControls";
@@ -26,6 +32,7 @@ import {
 } from "./ConversionResultList";
 
 export default function ConversionPage() {
+  const { user, isLoaded } = useUser();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [conversionItems, setConversionItems] = useState<ConversionItem[]>([]);
   const [prefix, setPrefix] = useState("");
@@ -33,12 +40,22 @@ export default function ConversionPage() {
   const [compressionQuality, setCompressionQuality] = useState(90);
   const [language, setLanguage] = useState<"spanish" | "english">("spanish");
   const [useAiForName, setUseAiForName] = useState(true);
+  const [maxBatchSize, setMaxBatchSize] = useState(5);
   const { toast } = useToast();
 
+  // Load user profile to get batch size limit
+  useEffect(() => {
+    if (isLoaded && user) {
+      getUserProfile(user.id).then((profile) => {
+        if (profile) {
+          setMaxBatchSize(profile.max_batch_size);
+        }
+      });
+    }
+  }, [isLoaded, user]);
 
   const handleFilesSelect = useCallback((files: File[]) => {
     setSelectedFiles(files);
-    // Reset conversion items when new files are selected
     setConversionItems([]);
   }, []);
 
@@ -49,27 +66,23 @@ export default function ConversionPage() {
 
   const processImage = async (
     file: File,
-    itemId: string,
+    itemId: string
   ): Promise<Partial<ConversionItem>> => {
     try {
-      // Get metadata
       const metadata = await getImageMetadata(file);
 
-      // Update status to processing
       setConversionItems((prev) =>
         prev.map((item) =>
           item.id === itemId
             ? { ...item, originalMetadata: metadata, status: "processing" }
-            : item,
-        ),
+            : item
+        )
       );
 
-      // Convert to WebP
       const webpResult = await convertToWebP(metadata, {
         quality: compressionQuality / 100,
       });
 
-      // Generate name
       let finalBaseName = "converted-image";
 
       if (useAiForName) {
@@ -93,7 +106,6 @@ export default function ConversionPage() {
           finalBaseName = generatedName;
         } catch (aiError) {
           console.error("AI naming error:", aiError);
-          // Fallback to original filename
           const lastDotIndex = file.name.lastIndexOf(".");
           finalBaseName = file.name
             .substring(0, lastDotIndex)
@@ -119,12 +131,11 @@ export default function ConversionPage() {
         }
       }
 
-      // Add unique suffix: YYMMDD-XXXXX (date + random 5-digit number)
       const now = new Date();
       const datePart = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
       const randomPart = String(Math.floor(Math.random() * 100000)).padStart(
         5,
-        "0",
+        "0"
       );
       const finalName = `${finalBaseName}-${datePart}-${randomPart}.webp`;
 
@@ -154,9 +165,25 @@ export default function ConversionPage() {
       return;
     }
 
+    // Check usage limits if user is authenticated and AI is being used
+    if (user && useAiForName) {
+      const usageCheck = await checkUsageLimit(
+        user.id,
+        selectedFiles.length,
+        true
+      );
+      if (!usageCheck.allowed) {
+        toast({
+          title: "Límite alcanzado",
+          description: `Has usado ${usageCheck.used} de ${usageCheck.limit} conversiones IA este mes. Te quedan ${usageCheck.remaining}. Desactiva la IA o actualiza tu plan.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
 
-    // Initialize conversion items
     const initialItems: ConversionItem[] = selectedFiles.map((file, index) => ({
       id: `${file.name}-${index}-${Date.now()}`,
       originalFile: file,
@@ -167,31 +194,32 @@ export default function ConversionPage() {
     }));
     setConversionItems(initialItems);
 
-    // Process images sequentially to avoid overwhelming the AI
     for (const item of initialItems) {
       setConversionItems((prev) =>
         prev.map((i) =>
-          i.id === item.id ? { ...i, status: "processing" } : i,
-        ),
+          i.id === item.id ? { ...i, status: "processing" } : i
+        )
       );
 
       const result = await processImage(item.originalFile, item.id);
 
       setConversionItems((prev) =>
-        prev.map((i) => (i.id === item.id ? { ...i, ...result } : i)),
+        prev.map((i) => (i.id === item.id ? { ...i, ...result } : i))
       );
     }
 
     setIsLoading(false);
 
-    const doneCount = initialItems.length; // Will be updated by state
+    // Log the conversion
+    if (user) {
+      await logConversion(user.id, selectedFiles.length, useAiForName);
+    }
+
     toast({
       title: "Conversión Completada",
       description: `Se procesaron ${selectedFiles.length} imagen(es).`,
     });
   };
-
-
 
   const handleClear = () => {
     setSelectedFiles([]);
@@ -207,82 +235,56 @@ export default function ConversionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="bg-background border-b border-border shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-primary">
-            <ImagePlay className="h-6 w-6 text-primary" />
-            <h1 className="text-xl md:text-2xl font-semibold">Zoe Convert</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <HelpCircle className="mr-1 h-4 w-4" /> Help
-            </Button>
-            <UserButton />
-          </div>
-        </div>
-      </header>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        {/* Left Column: Controls & Info */}
+        <Card className="shadow-lg bg-card text-card-foreground">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">
+              Convierte tus imágenes a WebP
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <ImageUploader
+              selectedFiles={selectedFiles}
+              onFilesSelect={handleFilesSelect}
+              onRemoveFile={handleRemoveFile}
+              onError={(msg) => {
+                toast({
+                  title: "Error",
+                  description: msg,
+                  variant: "destructive",
+                });
+              }}
+              onClear={handleClear}
+              maxFiles={maxBatchSize}
+            />
 
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-          {/* Left Column: Controls & Info */}
-          <Card className="shadow-lg bg-card text-card-foreground">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">
-                Convert your images to smart WebP
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <ImageUploader
-                selectedFiles={selectedFiles}
-                onFilesSelect={handleFilesSelect}
-                onRemoveFile={handleRemoveFile}
-                onError={(msg) => {
-                  toast({
-                    title: "Error",
-                    description: msg,
-                    variant: "destructive",
-                  });
-                }}
-                onClear={handleClear}
-              />
+            <ConversionControls
+              useAiForName={useAiForName}
+              setUseAiForName={setUseAiForName}
+              prefix={prefix}
+              setPrefix={setPrefix}
+              language={language}
+              setLanguage={setLanguage}
+              compressionQuality={compressionQuality}
+              setCompressionQuality={setCompressionQuality}
+              onConvert={handleConvert}
+              onClear={handleClear}
+              isLoading={isLoading}
+              hasFile={selectedFiles.length > 0}
+              hasResult={conversionItems.length > 0}
+            />
+          </CardContent>
+        </Card>
 
-              <ConversionControls
-                useAiForName={useAiForName}
-                setUseAiForName={setUseAiForName}
-                prefix={prefix}
-                setPrefix={setPrefix}
-                language={language}
-                setLanguage={setLanguage}
-                compressionQuality={compressionQuality}
-                setCompressionQuality={setCompressionQuality}
-                onConvert={handleConvert}
-                onClear={handleClear}
-                isLoading={isLoading}
-                hasFile={selectedFiles.length > 0}
-                hasResult={conversionItems.length > 0}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Right Column: Results List */}
-          <ConversionResultList
-            items={conversionItems}
-            compressionQuality={compressionQuality}
-            useAiForName={useAiForName}
-          />
-        </div>
-      </main>
-
-      <footer className="bg-background border-t border-border text-center py-4 mt-auto">
-        <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Zoe Convert. All rights reserved.
-        </p>
-      </footer>
+        {/* Right Column: Results List */}
+        <ConversionResultList
+          items={conversionItems}
+          compressionQuality={compressionQuality}
+          useAiForName={useAiForName}
+        />
+      </div>
     </div>
   );
 }
